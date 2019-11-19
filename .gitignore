@@ -1,0 +1,8 @@
+target/
+data/
+.idea/
+*.iml
+*.log
+*.lck
+*.jks
+signatures/
