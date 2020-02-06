@@ -8,6 +8,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.ExternalSigningSupport;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSigProperties;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSignDesigner;
 import org.apache.pdfbox.util.Hex;
 
 import java.io.*;
@@ -17,6 +19,8 @@ import java.util.Base64;
 import java.util.Calendar;
 
 public class Tools {
+    private static final String SIGNATURE_PNG = "signature.png";
+    private static final ClassLoader classLoader = Tools.class.getClassLoader();
 
     private static final int PREFERRED_SIGNATURE_SIZE = 21 * 1000;
 
@@ -55,17 +59,36 @@ public class Tools {
 
     public static Digest createSignature(InputStream inputStream) throws IOException, NoSuchAlgorithmException {
         Digest digest = new Digest();
+
+        String location = "Geneva, Switzerland";
+
+        InputStream image = classLoader.getResourceAsStream(SIGNATURE_PNG);
+        PDVisibleSignDesigner visibleSignDesigner = new PDVisibleSignDesigner(image);
+        visibleSignDesigner.coordinates(0, -100).zoom(-93f).adjustForRotation();
+
+        PDVisibleSigProperties visibleSignatureProperties = new PDVisibleSigProperties();
+        visibleSignatureProperties
+                .preferredSize(0)
+                .visualSignEnabled(true)
+                .setPdVisibleSignature(visibleSignDesigner);
+
+        visibleSignatureProperties.buildSignature();
+
         PDSignature signature = new PDSignature();
         signature.setFilter(PDSignature.FILTER_ADOBE_PPKLITE);
         signature.setSubFilter(PDSignature.SUBFILTER_ADBE_PKCS7_DETACHED);
-        signature.setLocation("Geneva, Switzerland");
+        signature.setLocation(location);
         signature.setSignDate(Calendar.getInstance());
 
         try (PDDocument document = PDDocument.load(inputStream)) {
+            int pageCount = document.getPages().getCount();
             try (SignatureOptions signatureOptions = new SignatureOptions()) {
                 try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
 
                     signatureOptions.setPreferredSignatureSize(PREFERRED_SIGNATURE_SIZE);
+                    signatureOptions.setVisualSignature(visibleSignatureProperties.getVisibleSignature());
+                    signatureOptions.setPage(pageCount - 1);
+
                     document.addSignature(signature, signatureOptions);
 
                     ExternalSigningSupport externalSigning = document.saveIncrementalForExternalSigning(stream);

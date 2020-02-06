@@ -6,3 +6,5 @@ data/
 *.lck
 *.jks
 signatures/
+output.pdf
+swisscom.jks

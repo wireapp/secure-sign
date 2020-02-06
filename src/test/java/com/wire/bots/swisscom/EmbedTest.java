@@ -16,9 +16,9 @@ import java.util.Calendar;
 
 public class EmbedTest {
     private static final String CMS_SIG = "cms.sig";
-
     private static final String OUTPUT_PDF = "output.pdf";
     private static final String INPUT_PDF = "input.pdf";
+    private static final String SIGNATURE_PNG = "signature.png";
     private ClassLoader classLoader = EmbedTest.class.getClassLoader();
 
     @Test
@@ -68,12 +68,25 @@ public class EmbedTest {
     }
 
     @Test
-    public void test2() throws IOException {
-        InputStream resourceAsStream = classLoader.getResourceAsStream(INPUT_PDF);
-        FileOutputStream fos = new FileOutputStream(OUTPUT_PDF);
-        CreateSignature createSignature = new CreateSignature();
-        createSignature.signPdf(resourceAsStream, fos);
-        new File(OUTPUT_PDF).delete();
+    public void test2() {
+        try {
+            InputStream pdf = classLoader.getResourceAsStream(INPUT_PDF);
+            InputStream image = classLoader.getResourceAsStream(SIGNATURE_PNG);
+
+            int page = 1;
+
+            CreateSignature createSignature = new CreateSignature(image, page);
+
+            int preferredSize = 0;
+            createSignature.setVisibleSignatureProperties("name", "location", "Security", preferredSize, page, true);
+
+            FileOutputStream fos = new FileOutputStream(OUTPUT_PDF);
+            createSignature.signPdf(pdf, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            //new File(OUTPUT_PDF).delete();
+        }
     }
 
     @Test
@@ -84,6 +97,6 @@ public class EmbedTest {
         File out = Tools.writeToFile(digest.pdf, OUTPUT_PDF);
         Tools.attachCMS(new ByteArrayInputStream(digest.pdf), out, Util.toByteArray(cmsStream));
 
-        out.delete();
+        //out.delete();
     }
 }

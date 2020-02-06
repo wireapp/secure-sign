@@ -19,15 +19,15 @@ auth: ${SWISSCOM_SERVICE_TOKEN}
 
 db:
   driver: postgresql
-  host: ${POSTGRES_HOST}
+  host: ${POSTGRES_HOST:-}
   user: postgres
-  password: ${POSTGRES_PASSWORD}
+  password: ${POSTGRES_PASSWORD:-}
   port: 5432
 
 database:
   driverClass: org.postgresql.Driver
   user: postgres
-  password: ${POSTGRES_PASSWORD}
+  password: ${POSTGRES_PASSWORD:-}
   url: ${POSTGRES_URL}
   properties:
     charSet: UTF-8
@@ -40,9 +40,9 @@ database:
   minIdleTime: 1 minute
 
 jerseyClient:
-  timeout: 4s
-  connectionTimeout: 2s
-  connectionRequestTimeout: 2s
+  timeout: 60s
+  connectionTimeout: 20s
+  connectionRequestTimeout: 20s
   keepAlive: 0ms
   retries: 3
   userAgent: Wire
@@ -52,7 +52,7 @@ jerseyClient:
     provider: SunJSSE
     verifyHostname: false
     keyStorePath: ./swisscom.jks
-    keyStorePassword: ${KEYSTORE_PASSWORD}
+    keyStorePassword: ${KEYSTORE_PASSWORD:-}
     keyStoreType: JKS
     trustSelfSignedCertificates: true
     supportedProtocols:
