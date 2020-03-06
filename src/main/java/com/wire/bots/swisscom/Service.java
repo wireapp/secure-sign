@@ -19,6 +19,9 @@ package com.wire.bots.swisscom;
 
 import com.wire.bots.sdk.MessageHandlerBase;
 import com.wire.bots.sdk.Server;
+import com.wire.bots.swisscom.handlers.MessageHandler;
+import com.wire.bots.swisscom.handlers.RecordingMessageHandler;
+import com.wire.bots.swisscom.handlers.SignatureMessageHandler;
 import com.wire.bots.swisscom.model.Config;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Bootstrap;
@@ -47,10 +50,7 @@ public class Service extends Server<Config> {
     @Override
     protected void initialize(Config config, Environment env) {
         this.swisscomClient = new SwisscomClient(getClient());
-
-        if (!config.database.getDriverClass().equalsIgnoreCase("test")) {
-            this.jdbi = new DBIFactory().build(environment, config.database, "postgresql");
-        }
+        this.jdbi = new DBIFactory().build(environment, config.database, "postgresql");
 
         PullingManager pullingManager = new PullingManager(jdbi, swisscomClient);
 
@@ -62,6 +62,8 @@ public class Service extends Server<Config> {
 
     @Override
     protected MessageHandlerBase createHandler(Config config, Environment env) {
-        return new MessageHandler(jdbi, swisscomClient);
+        SignatureMessageHandler signatureMessageHandler = new SignatureMessageHandler(jdbi, swisscomClient);
+        RecordingMessageHandler recordingMessageHandler = new RecordingMessageHandler(jdbi);
+        return new MessageHandler(signatureMessageHandler, recordingMessageHandler);
     }
 }

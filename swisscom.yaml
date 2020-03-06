@@ -1,34 +1,19 @@
-server:
-  rootPath: /swisscom/*
-  requestLog:
-    appenders: []
-
 logging:
   level: INFO
   loggers:
-    "com.wire.bots.logger": INFO
+    "com.wire.bots.logger": ${LOG_LEVEL:-INFO}
 
 swagger:
   resourcePackage: com.wire.bots.swisscom.resources
-  uriPrefix: /swisscom
   schemes:
     - http
     - https
 
-auth: ${SWISSCOM_SERVICE_TOKEN}
-
-db:
-  driver: postgresql
-  host: ${POSTGRES_HOST:-}
-  user: postgres
-  password: ${POSTGRES_PASSWORD:-}
-  port: 5432
-
 database:
   driverClass: org.postgresql.Driver
-  user: postgres
-  password: ${POSTGRES_PASSWORD:-}
-  url: ${POSTGRES_URL}
+  user: ${DB_USER:-}
+  password: ${DB_PASSWORD:-}
+  url: ${DB_URL:-jdbc:postgresql://localhost/swisscom}
   properties:
     charSet: UTF-8
   maxWaitForConnection: 1s
@@ -38,6 +23,7 @@ database:
   checkConnectionWhileIdle: false
   evictionInterval: 10s
   minIdleTime: 1 minute
+  baseline: true
 
 jerseyClient:
   timeout: 60s

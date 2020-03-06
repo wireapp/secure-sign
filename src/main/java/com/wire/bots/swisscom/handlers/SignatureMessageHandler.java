@@ -1,4 +1,4 @@
-package com.wire.bots.swisscom;
+package com.wire.bots.swisscom.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wire.bots.sdk.MessageHandlerBase;
@@ -15,6 +15,8 @@ import com.wire.bots.swisscom.DAO.DocumentDAO;
 import com.wire.bots.swisscom.DAO.EventsDAO;
 import com.wire.bots.swisscom.DAO.SignRequestDAO;
 import com.wire.bots.swisscom.DAO.SignerDAO;
+import com.wire.bots.swisscom.SwisscomClient;
+import com.wire.bots.swisscom.Tools;
 import com.wire.bots.swisscom.model.Digest;
 import com.wire.bots.swisscom.model.Document;
 import com.wire.bots.swisscom.model.Signer;
@@ -23,7 +25,7 @@ import org.skife.jdbi.v2.DBI;
 import java.io.ByteArrayInputStream;
 import java.util.UUID;
 
-public class MessageHandler extends MessageHandlerBase {
+public class SignatureMessageHandler extends MessageHandlerBase {
     private static final String PHONE_NUMBER_PROMPT =
             "In order to be able to sign documents you need to provide your phone number.\n" +
                     "Just type your phone# like: +491726842...";
@@ -36,16 +38,21 @@ public class MessageHandler extends MessageHandlerBase {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final SwisscomClient swisscomClient;
-    private final DBI jdbi;
+    private final SignerDAO signerDAO;
+    private final EventsDAO eventsDAO;
+    private final DocumentDAO documentDAO;
+    private final SignRequestDAO signRequestDAO;
 
-    MessageHandler(DBI jdbi, SwisscomClient swisscomClient) {
-        this.jdbi = jdbi;
+    public SignatureMessageHandler(DBI jdbi, SwisscomClient swisscomClient) {
         this.swisscomClient = swisscomClient;
+        signerDAO = jdbi.onDemand(SignerDAO.class);
+        eventsDAO = jdbi.onDemand(EventsDAO.class);
+        documentDAO = jdbi.onDemand(DocumentDAO.class);
+        signRequestDAO = jdbi.onDemand(SignRequestDAO.class);
     }
 
     @Override
-    public boolean onNewBot(NewBot newBot) {
-        SignerDAO signerDAO = jdbi.onDemand(SignerDAO.class);
+    public boolean onNewBot(NewBot newBot, String auth) {
         User origin = newBot.origin;
         if (1 == signerDAO.insert(origin.id, origin.name, origin.handle))
             Logger.info("onNewBot. New subscriber, bot: %s, user: %s", newBot.id, origin.id);
@@ -57,7 +64,6 @@ public class MessageHandler extends MessageHandlerBase {
     public void onNewConversation(WireClient client, SystemMessage message) {
         try {
             client.sendText(WELCOME_NOTE);
-            SignerDAO signerDAO = jdbi.onDemand(SignerDAO.class);
             for (Member member : message.conversation.members) {
                 UUID userId = member.id;
                 Signer signer = signerDAO.getSigner(userId);
@@ -79,8 +85,6 @@ public class MessageHandler extends MessageHandlerBase {
 
     @Override
     public void onMemberJoin(WireClient client, SystemMessage message) {
-        SignerDAO signerDAO = jdbi.onDemand(SignerDAO.class);
-
         try {
             for (UUID userId : message.users) {
                 Signer signer = signerDAO.getSigner(userId);
@@ -102,8 +106,6 @@ public class MessageHandler extends MessageHandlerBase {
 
     @Override
     public void onText(WireClient client, TextMessage msg) {
-        SignerDAO signerDAO = jdbi.onDemand(SignerDAO.class);
-
         try {
             String command = msg.getText();
             if (isPhoneNumber(command)) {
@@ -130,9 +132,6 @@ public class MessageHandler extends MessageHandlerBase {
 
     @Override
     public void onAttachment(WireClient client, AttachmentMessage msg) {
-        EventsDAO eventsDAO = jdbi.onDemand(EventsDAO.class);
-        DocumentDAO documentDAO = jdbi.onDemand(DocumentDAO.class);
-
         try {
             if (msg.getName().toLowerCase().endsWith(".pdf")) {
                 String payload = mapper.writeValueAsString(msg);
@@ -150,9 +149,7 @@ public class MessageHandler extends MessageHandlerBase {
         if (msg.getEmoji().isEmpty()) {
             return;
         }
-        SignerDAO signerDAO = jdbi.onDemand(SignerDAO.class);
-        DocumentDAO documentDAO = jdbi.onDemand(DocumentDAO.class);
-        SignRequestDAO signRequestDAO = jdbi.onDemand(SignRequestDAO.class);
+
         try {
             UUID botId = client.getId();
             UUID documentId = msg.getReactionMessageId();
