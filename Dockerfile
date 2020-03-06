@@ -8,4 +8,6 @@ RUN mkdir /opt/swisscom/signatures
 
 WORKDIR /opt/swisscom
 
-EXPOSE  8080 8081 8082
+EXPOSE  8080 8081
+
+ENTRYPOINT ["java", "-jar", "swisscom.jar", "server", "/etc/swisscom/swisscom.yaml"]

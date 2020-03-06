@@ -65,6 +65,9 @@ public class SignatureMessageHandler extends MessageHandlerBase {
         try {
             client.sendText(WELCOME_NOTE);
             for (Member member : message.conversation.members) {
+                if (member.service != null)
+                    continue;
+
                 UUID userId = member.id;
                 Signer signer = signerDAO.getSigner(userId);
                 if (signer != null) {
