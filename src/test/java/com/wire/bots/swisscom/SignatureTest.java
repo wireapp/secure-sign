@@ -8,7 +8,6 @@ import com.wire.bots.swisscom.model.Document;
 import com.wire.bots.swisscom.model.Signer;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.client.JerseyClientConfiguration;
-import io.dropwizard.testing.ConfigOverride;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -23,15 +22,13 @@ import java.util.UUID;
 
 public class SignatureTest {
     @ClassRule
-    public static DropwizardAppRule<Config> app = new DropwizardAppRule<>(Service.class,
-            "swisscom.yaml",
-            ConfigOverride.config("database.driverClass", "test"));
+    public static DropwizardAppRule<Config> app = new DropwizardAppRule<>(Service.class, "swisscom.yaml");
     private static final String INPUT_PDF = "input.pdf";
 
     @Test
     public void test() {
         try {
-            JerseyClientConfiguration jerseyCfg = app.getConfiguration().getJerseyClientConfiguration();
+            JerseyClientConfiguration jerseyCfg = app.getConfiguration().jerseyClient;
 
             Client client = new JerseyClientBuilder(app.getEnvironment())
                     .using(jerseyCfg)

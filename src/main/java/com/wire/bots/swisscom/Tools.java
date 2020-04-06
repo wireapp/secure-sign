@@ -1,5 +1,6 @@
 package com.wire.bots.swisscom;
 
+import com.wire.bots.sdk.tools.Logger;
 import com.wire.bots.swisscom.model.Digest;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -11,10 +12,13 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSigProperties;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSignDesigner;
 import org.apache.pdfbox.util.Hex;
+import org.bouncycastle.cms.*;
 
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.*;
 import java.util.Base64;
 import java.util.Calendar;
 
@@ -105,6 +109,33 @@ public class Tools {
             }
         }
         return digest;
+    }
+
+    public static boolean verify(byte[] doc, byte[] sig) throws CMSException, NoSuchProviderException, NoSuchAlgorithmException, CertStoreException {
+        CMSSignedData cms = new CMSSignedData(new CMSProcessableByteArray(doc), sig);
+        CertStore certStore = cms.getCertificatesAndCRLs("Collection", "BC");
+        SignerInformationStore signers = cms.getSignerInfos();
+        for (Object signerO : signers.getSigners()) {
+            SignerInformation signer = (SignerInformation) signerO;
+            for (Object certO : certStore.getCertificates(signer.getSID())) {
+                X509Certificate cert = (X509Certificate) certO;
+                try {
+                    if (!signer.verify(cert, "BC"))
+                        return false;
+                } catch (CMSSignerDigestMismatchException e) {
+                    Logger.error("CMS verify: ", e);
+                    return false;
+                } catch (CertificateNotYetValidException e) {
+                    Logger.error("CMS verify: ", e);
+                    return false;
+                } catch (CertificateExpiredException e) {
+                    Logger.error("CMS verify: ", e);
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static void attachCMS(InputStream inputStream, File outputPdf, byte[] cms) throws IOException {

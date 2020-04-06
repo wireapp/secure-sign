@@ -47,6 +47,12 @@ class PullingManager {
                 byte[] cms = Base64.getDecoder().decode(signObj.base64Signature.value);
                 signatureDAO.insert(request.responseId, requestId, request.documentId, request.userId, cms);
 
+                WireClient client = Service.instance.getRepo().getClient(request.botId);
+
+                // post CMS
+                File cmsFile = Tools.writeToFile(cms, String.format("signatures/%s.cms", request.documentId));
+                client.sendFile(cmsFile, "application/cms");
+
                 String documentName = signObj.documentId;
 
                 Logger.info("Received signature: req: %s, doc: %s, cms: %d",
@@ -57,13 +63,18 @@ class PullingManager {
                 // get the original doc from db
                 byte[] pdf = documentDAO.getSigned(request.documentId);
 
+                try {
+                    Tools.verify(pdf, cms);
+                } catch (Exception e) {
+                    Logger.warning("CMS for %s ist corrupt: %s", request.documentId, e);
+                }
+
                 // attach cms to pdf
                 String outPdfFilename = String.format("signatures/signed_%s", documentName);
                 File outPdfFile = Tools.writeToFile(pdf, outPdfFilename);
                 Tools.attachCMS(new ByteArrayInputStream(pdf), outPdfFile, cms);
 
                 // post signed doc into conversation
-                WireClient client = Service.instance.getRepo().getClient(request.botId);
                 client.sendText(String.format("**%s** signed document: `%s`", signer.name, documentName));
                 UUID msgId = client.sendFile(outPdfFile, "application/pdf");
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wire.bots.sdk.tools.Logger;
 import com.wire.bots.swisscom.model.Document;
 import com.wire.bots.swisscom.model.Signer;
 
@@ -18,7 +19,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 public class SwisscomClient {
-
+    private ObjectMapper mapper = new ObjectMapper();
     private WebTarget sign;
     private WebTarget pending;
 
@@ -49,6 +50,8 @@ public class SwisscomClient {
         phone.message = String.format("Please confirm the signing of the document: %s", document.name);
         //phone.serialNumber = "SAS01E0D9GAI7OO1";
 
+        Logger.debug(mapper.writeValueAsString(request));
+
         Response res = sign
                 .request(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
@@ -58,7 +61,8 @@ public class SwisscomClient {
             throw new IOException(res.readEntity(String.class));
 
         String entity = res.readEntity(String.class);
-        ObjectMapper mapper = new ObjectMapper();
+
+        Logger.debug(entity);
 
         RootSignResponse response = mapper.readValue(entity, RootSignResponse.class);
         return response.signResponse;

@@ -19,17 +19,17 @@ package com.wire.bots.swisscom;
 
 import com.wire.bots.sdk.MessageHandlerBase;
 import com.wire.bots.sdk.Server;
+import com.wire.bots.swisscom.handlers.SignatureMessageHandler;
 import com.wire.bots.swisscom.model.Config;
-import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.skife.jdbi.v2.DBI;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 public class Service extends Server<Config> {
     public static Service instance;
-    private DBI jdbi;
     private SwisscomClient swisscomClient;
 
     public static void main(String[] args) throws Exception {
@@ -42,17 +42,15 @@ public class Service extends Server<Config> {
         super.initialize(bootstrap);
 
         instance = (Service) bootstrap.getApplication();
+
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     @Override
     protected void initialize(Config config, Environment env) {
         this.swisscomClient = new SwisscomClient(getClient());
 
-        if (!config.database.getDriverClass().equalsIgnoreCase("test")) {
-            this.jdbi = new DBIFactory().build(environment, config.database, "postgresql");
-        }
-
-        PullingManager pullingManager = new PullingManager(jdbi, swisscomClient);
+        PullingManager pullingManager = new PullingManager(getJdbi(), swisscomClient);
 
         env.lifecycle()
                 .scheduledExecutorService("pullingManager")
@@ -62,6 +60,6 @@ public class Service extends Server<Config> {
 
     @Override
     protected MessageHandlerBase createHandler(Config config, Environment env) {
-        return new MessageHandler(jdbi, swisscomClient);
+        return new SignatureMessageHandler(getJdbi(), swisscomClient);
     }
 }
