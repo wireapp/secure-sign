@@ -8,16 +8,21 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.ExternalSigningSup
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
 import org.apache.pdfbox.util.Hex;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Test;
 
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.util.Calendar;
+
+import static com.wire.bots.swisscom.Tools.verify;
 
 public class EmbedTest {
     private static final String CMS_SIG = "cms.sig";
     private static final String OUTPUT_PDF = "output.pdf";
     private static final String INPUT_PDF = "input.pdf";
+    private static final String INPUT_WITH_PLACEHOLDER_PDF = "input_with_placeholder.pdf";
     private static final String SIGNATURE_PNG = "signature.png";
     private ClassLoader classLoader = EmbedTest.class.getClassLoader();
 
@@ -55,7 +60,6 @@ public class EmbedTest {
 
                 // remember the offset (add 1 because of "<")
                 offset = begin;
-
             }
         }
 
@@ -63,8 +67,19 @@ public class EmbedTest {
             raf.seek(offset);
             raf.write(hex);
         }
+    }
 
-        new File(OUTPUT_PDF).delete();
+    @Test
+    public void verifySignature() throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+
+        InputStream pdf = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.pdf");
+        InputStream cms = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.cms");
+
+        final byte[] doc = Util.toByteArray(pdf);
+        final byte[] signature = Util.toByteArray(cms);
+
+        verify(doc, signature);
     }
 
     @Test

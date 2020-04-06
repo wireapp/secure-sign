@@ -179,12 +179,12 @@ public class SignatureMessageHandler extends MessageHandlerBase {
             documentDAO.update(documentId, digest.pdf);
 
             SwisscomClient.SignResponse signResponse = swisscomClient.sign(signer, document, digest.hash);
-            SwisscomClient.StepUpAuthorisationInfo stepUpAuthorisationInfo = signResponse.optionalOutputs.stepUpAuthorisationInfo;
-            if (stepUpAuthorisationInfo == null) {
+            if (signResponse.optionalOutputs == null || signResponse.optionalOutputs.stepUpAuthorisationInfo == null) {
                 client.sendDirectText("Failed to send signing req to AIS", userId);
                 return;
             }
 
+            SwisscomClient.StepUpAuthorisationInfo stepUpAuthorisationInfo = signResponse.optionalOutputs.stepUpAuthorisationInfo;
             UUID requestId = signResponse.requestId;
             UUID responseId = signResponse.optionalOutputs.responseId;
 
@@ -195,7 +195,6 @@ public class SignatureMessageHandler extends MessageHandlerBase {
 
             client.sendDirectText(format, userId);
         } catch (Exception e) {
-            e.printStackTrace();
             Logger.error(e.getMessage());
         }
     }

@@ -19,13 +19,13 @@ package com.wire.bots.swisscom;
 
 import com.wire.bots.sdk.MessageHandlerBase;
 import com.wire.bots.sdk.Server;
-import com.wire.bots.swisscom.handlers.MessageHandler;
-import com.wire.bots.swisscom.handlers.RecordingMessageHandler;
 import com.wire.bots.swisscom.handlers.SignatureMessageHandler;
 import com.wire.bots.swisscom.model.Config;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 public class Service extends Server<Config> {
@@ -42,6 +42,8 @@ public class Service extends Server<Config> {
         super.initialize(bootstrap);
 
         instance = (Service) bootstrap.getApplication();
+
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     @Override
@@ -58,8 +60,6 @@ public class Service extends Server<Config> {
 
     @Override
     protected MessageHandlerBase createHandler(Config config, Environment env) {
-        SignatureMessageHandler signatureMessageHandler = new SignatureMessageHandler(getJdbi(), swisscomClient);
-        RecordingMessageHandler recordingMessageHandler = new RecordingMessageHandler(getJdbi());
-        return new MessageHandler(signatureMessageHandler, recordingMessageHandler);
+        return new SignatureMessageHandler(getJdbi(), swisscomClient);
     }
 }
