@@ -153,11 +153,11 @@ public class SignatureMessageHandler extends MessageHandlerBase {
             return;
         }
 
-        try {
-            UUID botId = client.getId();
-            UUID documentId = msg.getReactionMessageId();
-            UUID userId = msg.getUserId();
+        UUID botId = client.getId();
+        UUID documentId = msg.getReactionMessageId();
+        UUID userId = msg.getUserId();
 
+        try {
             Document document = documentDAO.getDocument(documentId);
             if (document == null) {
                 Logger.info("Unknown document: %s", documentId);
@@ -180,7 +180,7 @@ public class SignatureMessageHandler extends MessageHandlerBase {
 
             SwisscomClient.SignResponse signResponse = swisscomClient.sign(signer, document, digest.hash);
             if (signResponse.optionalOutputs == null || signResponse.optionalOutputs.stepUpAuthorisationInfo == null) {
-                client.sendDirectText("Failed to send signing req to AIS", userId);
+                client.sendDirectText(signResponse.result.minor, userId);
                 return;
             }
 
@@ -196,6 +196,12 @@ public class SignatureMessageHandler extends MessageHandlerBase {
             client.sendDirectText(format, userId);
         } catch (Exception e) {
             Logger.error(e.getMessage());
+            try {
+                final String txt = String.format("Failed to send signing req to AIS: %s", e);
+                client.sendDirectText(txt, userId);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 }

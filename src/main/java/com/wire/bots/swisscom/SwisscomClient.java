@@ -103,6 +103,14 @@ public class SwisscomClient {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Result {
+        @JsonProperty("ResultMajor")
+        public String major;
+        @JsonProperty("ResultMinor")
+        public String minor;
+    }
+
     public static class SignRequest {
         @JsonProperty("@Profile")
         public String profile = "http://ais.swisscom.ch/1.1";
@@ -215,6 +223,8 @@ public class SwisscomClient {
         public OptionalOutputs optionalOutputs;
         @JsonProperty("SignatureObject")
         public SignatureObject signature;
+        @JsonProperty("Result")
+        public Result result;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -12,11 +12,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Test;
 
 import java.io.*;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.util.Base64;
 import java.util.Calendar;
-
-import static com.wire.bots.swisscom.Tools.verify;
 
 public class EmbedTest {
     private static final String CMS_SIG = "cms.sig";
@@ -70,19 +70,6 @@ public class EmbedTest {
     }
 
     @Test
-    public void verifySignature() throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
-
-        InputStream pdf = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.pdf");
-        InputStream cms = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.cms");
-
-        final byte[] doc = Util.toByteArray(pdf);
-        final byte[] signature = Util.toByteArray(cms);
-
-        verify(doc, signature);
-    }
-
-    @Test
     public void test2() {
         try {
             InputStream pdf = classLoader.getResourceAsStream(INPUT_PDF);
@@ -113,5 +100,43 @@ public class EmbedTest {
         Tools.attachCMS(new ByteArrayInputStream(digest.pdf), out, Util.toByteArray(cmsStream));
 
         //out.delete();
+    }
+
+    @Test
+    public void testCalcDigest() throws IOException, NoSuchAlgorithmException {
+        InputStream fis = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.pdf");
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(Util.toByteArray(fis));
+        final String base64 = Base64.getEncoder().encodeToString(digest);
+        System.out.printf("%s\n", base64);
+    }
+
+    @Test
+    public void verifyBase64Signature() throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+
+        InputStream cms = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.cms.txt");
+        final byte[] signature = Base64.getDecoder().decode(Tools.toByteArray(cms));
+
+        InputStream pdf = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.pdf");
+        final byte[] doc = Util.toByteArray(pdf);
+
+        final boolean verify = Tools.verify(doc, signature);
+
+        assert verify;
+    }
+
+    @Test
+    public void verifySignature() throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+
+        InputStream cms = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.cms");
+        final byte[] signature = Tools.toByteArray(cms);
+
+        InputStream pdf = classLoader.getResourceAsStream("a4ede2b6-396c-4f71-894c-af4a25a91c52.pdf");
+        final byte[] doc = Util.toByteArray(pdf);
+
+        final boolean verify = Tools.verify(doc, signature);
+
+        assert verify;
     }
 }

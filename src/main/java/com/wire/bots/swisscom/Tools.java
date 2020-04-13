@@ -12,13 +12,20 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSigProperties;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSignDesigner;
 import org.apache.pdfbox.util.Hex;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cms.*;
+import org.bouncycastle.operator.ContentVerifierProvider;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.bouncycastle.util.Store;
 
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.cert.*;
+import java.security.Provider;
+import java.security.Security;
+import java.security.cert.CertStore;
+import java.security.cert.CertStoreException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Calendar;
 
@@ -111,25 +118,45 @@ public class Tools {
         return digest;
     }
 
-    public static boolean verify(byte[] doc, byte[] sig) throws CMSException, NoSuchProviderException, NoSuchAlgorithmException, CertStoreException {
+    public static boolean verify(byte[] doc, byte[] sig) throws CMSException, CertStoreException, NoSuchAlgorithmException {
+        Provider provider = Security.getProvider("BC");
         CMSSignedData cms = new CMSSignedData(new CMSProcessableByteArray(doc), sig);
-        CertStore certStore = cms.getCertificatesAndCRLs("Collection", "BC");
+        for (Object signerO : cms.getSignerInfos().getSigners()) {
+            SignerInformation signer = (SignerInformation) signerO;
+            final SignerId sid = signer.getSID();
+
+            CertStore certStore = cms.getCertificatesAndCRLs("Collection", provider);
+            for (Object cert : certStore.getCertificates(sid)) {
+                try {
+                    if (!signer.verify((X509Certificate) cert, provider))
+                        return false;
+                } catch (Exception e) {
+                    Logger.error("CMS verify: %s", e);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean verify2(byte[] doc, byte[] sig) throws CMSException {
+        CMSSignedData cms = new CMSSignedData(new CMSProcessableByteArray(doc), sig);
+        Store store = cms.getCertificates();
         SignerInformationStore signers = cms.getSignerInfos();
         for (Object signerO : signers.getSigners()) {
             SignerInformation signer = (SignerInformation) signerO;
-            for (Object certO : certStore.getCertificates(signer.getSID())) {
-                X509Certificate cert = (X509Certificate) certO;
+            for (Object certO : store.getMatches(signer.getSID())) {
+                X509CertificateHolder certificateHolder = (X509CertificateHolder) certO;
                 try {
-                    if (!signer.verify(cert, "BC"))
+                    ContentVerifierProvider contentVerifierProvider = new JcaContentVerifierProviderBuilder()
+                            .setProvider("BC")
+                            .build(certificateHolder);
+
+                    if (!certificateHolder.isSignatureValid(contentVerifierProvider))
                         return false;
-                } catch (CMSSignerDigestMismatchException e) {
-                    Logger.error("CMS verify: ", e);
-                    return false;
-                } catch (CertificateNotYetValidException e) {
-                    Logger.error("CMS verify: ", e);
-                    return false;
-                } catch (CertificateExpiredException e) {
-                    Logger.error("CMS verify: ", e);
+                } catch (Exception e) {
+                    Logger.error("CMS verify: %s", e);
                     return false;
                 }
             }

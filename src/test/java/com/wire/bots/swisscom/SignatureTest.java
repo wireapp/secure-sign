@@ -10,7 +10,6 @@ import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.junit.ClassRule;
-import org.junit.Test;
 
 import javax.ws.rs.client.Client;
 import java.io.ByteArrayInputStream;
@@ -25,7 +24,7 @@ public class SignatureTest {
     public static DropwizardAppRule<Config> app = new DropwizardAppRule<>(Service.class, "swisscom.yaml");
     private static final String INPUT_PDF = "input.pdf";
 
-    @Test
+    //    @Test
     public void test() {
         try {
             JerseyClientConfiguration jerseyCfg = app.getConfiguration().jerseyClient;
